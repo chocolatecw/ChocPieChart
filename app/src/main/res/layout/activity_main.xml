@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:ChocPieChart="http://schemas.android.com/apk/res-auto"
+    tools:context="com.xysk.chocpiechart.MainActivity">
+
+    <!--<TextView-->
+        <!--android:id="@+id/hw"-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:text="Hello World!" />-->
+    <com.xysk.library.view.ChocPieChart
+        android:id="@+id/chocpiechart"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:padding="10dp"
+
+        ChocPieChart:textSize="16sp"
+        ChocPieChart:textColor="@android:color/holo_orange_dark"/>
+</RelativeLayout>
