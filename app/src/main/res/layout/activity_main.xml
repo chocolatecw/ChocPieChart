@@ -18,7 +18,8 @@
         android:layout_centerHorizontal="true"
         android:layout_marginTop="20dp"
         android:padding="10dp"
-
-        ChocPieChart:textSize="16sp"
+        android:background="@android:color/white"
+        ChocPieChart:textSize="10sp"
+        ChocPieChart:radius="60dp"
         ChocPieChart:textColor="@android:color/holo_orange_dark"/>
 </RelativeLayout>

@@ -21,10 +21,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         chocPieChart = (ChocPieChart) findViewById(R.id.chocpiechart);
-        pieDatas.add(new PieData("一测试一测试一测试", 2, Color.YELLOW));
+        pieDatas.add(new PieData("四测试", 2, 0xFFD15FEE));
+//        pieDatas.add(new PieData("一测试一测试一测试", 2, Color.YELLOW));
         pieDatas.add(new PieData("二测试", 3, Color.BLUE));
         pieDatas.add(new PieData("三测试", 1, Color.GREEN));
-        pieDatas.add(new PieData("四测试", 2, 0xFFD15FEE));
         chocPieChart.setDatas(pieDatas);
 //        chocPieChart.setTextColor(Color.WHITE);
 //        chocPieChart.setBackgroundColor(Color.RED);
