@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="default_text_color">#FF4081</color>
-    <color name="default_background_color">#FFF0F5</color>
+    <color name="default_background_color">#F3F085</color>
+    <color name="shadow_color">#EFEBE9</color>
 </resources>

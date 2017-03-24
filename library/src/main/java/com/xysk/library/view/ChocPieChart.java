@@ -14,6 +14,7 @@ import android.icu.util.Measure;
 import android.support.v4.content.ContextCompat;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.AccelerateDecelerateInterpolator;
 
@@ -42,6 +43,7 @@ public class ChocPieChart extends View {
     private Paint mSectorPaint;
     private Paint mInnerCirclePaint;
     private Paint mNamePaint;
+    private Paint mShadowCirclePaint;
     private List<PieData> datas;
     private float proportionSum;
     private float innerRadius;
@@ -50,6 +52,12 @@ public class ChocPieChart extends View {
     private int sectorIndex = 0;
     private float totalDegree;
     private RectF rectF;
+    private int tapRegionIndex = -1;
+    private boolean isTap = false;
+    private int animationRadius;
+    private int pieLeft;
+    private int pieTop;
+    private float animShelterRadius;
 //    int i = 1;
 
     public ChocPieChart(Context context) {
@@ -70,7 +78,7 @@ public class ChocPieChart extends View {
             textColor = a.getColor(R.styleable.ChocPieChart_textColor, ContextCompat.getColor(context, R.color.default_text_color));
             textSize = a.getDimensionPixelOffset(R.styleable.ChocPieChart_textSize, UnitConvertUtil.Sp2Px(context, default_text_size));
             radius = a.getDimensionPixelOffset(R.styleable.ChocPieChart_radius, UnitConvertUtil.Dp2Px(context, default_radius));
-            mBackgroundColor = a.getColor(R.styleable.ChocPieChart_android_background, ContextCompat.getColor(context, R.color.default_background_color));
+            mBackgroundColor = a.getColor(R.styleable.ChocPieChart_android_background, Color.BLACK);
         }finally {
             a.recycle();
         }
@@ -93,6 +101,8 @@ public class ChocPieChart extends View {
         mNamePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mNamePaint.setColor(Color.BLUE);
 
+        mShadowCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mShadowCirclePaint.setColor(ContextCompat.getColor(getContext(), R.color.shadow_color));
     }
 
     private float getSweepAngle(PieData pd) {
@@ -147,6 +157,7 @@ public class ChocPieChart extends View {
 
         int width;
         int height;
+        int tapExtensionRadius;
 
         if(widthMode == MeasureSpec.EXACTLY) {
             radius = Math.min(radius, (widthSize+getPaddingLeft()+getPaddingRight())/2);
@@ -155,20 +166,36 @@ public class ChocPieChart extends View {
         if(heightMode == MeasureSpec.EXACTLY) {
             radius = Math.min(radius, (heightSize+getPaddingTop()+getPaddingBottom())/2);
         }
-        width = radius*2 + getPaddingLeft() + getPaddingRight();
-        height = radius*2 + getPaddingTop() + getPaddingBottom();
+        innerRadius = radius*3f/7;
+        tapExtensionRadius = (int) (radius*2f/9);
+        animShelterRadius = innerRadius + tapExtensionRadius;
+        animationRadius = radius+tapExtensionRadius;
+        pieLeft = getPaddingLeft()+tapExtensionRadius;
+        pieTop = getPaddingTop()+tapExtensionRadius;
+        width = animationRadius*2 + getPaddingLeft() + getPaddingRight();
+        height = animationRadius*2 + getPaddingTop() + getPaddingBottom();
         setMeasuredDimension(width*2, height);
 //        i++;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        rectF = new RectF(getPaddingLeft(), getPaddingTop(), getPaddingLeft()+radius*2, getPaddingTop()+radius*2);
-        for (int i = 0; i < sectorIndex; i++) {
-            mSectorPaint.setColor(getItem(i).getColor());
-            canvas.drawArc(rectF, getStartAngle(i), getSweepAngle(getItem(i)), true, mSectorPaint);
-            drawText(canvas, getPercentage(i), getStartAngle(i)+getSweepAngle(getItem(i))/2);
+        rectF = new RectF(pieLeft, pieTop, pieLeft+radius*2, pieTop+radius*2);
+        if(isTap) {
+            drawDueTap(canvas);
+            isTap = false;
+            return;
         }
+
+        if(sectorIndex < datas.size()) {
+            int index = sectorIndex;
+            for (int i = 0; i < index; i++) { //这里sectorIndex要同步
+                mSectorPaint.setColor(getItem(i).getColor());
+                canvas.drawArc(rectF, getStartAngle(i), getSweepAngle(getItem(i)), true, mSectorPaint);
+                drawText(canvas, getPercentage(i), getStartAngle(i)+getSweepAngle(getItem(i))/2);
+            }
+        }
+
         mSectorPaint.setColor(getItem(sectorIndex).getColor());
         float sweepAngle = curSweepAngle-getStartAngle(sectorIndex) <= getSweepAngle(getItem(sectorIndex))
                 ? curSweepAngle-getStartAngle(sectorIndex) : getSweepAngle(getItem(sectorIndex));
@@ -177,10 +204,101 @@ public class ChocPieChart extends View {
             drawText(canvas, getPercentage(sectorIndex), getStartAngle(sectorIndex)+sweepAngle/2);
         }
 
-        innerRadius = radius*3f/7;
-        canvas.drawCircle(getPaddingLeft()+radius, getPaddingTop()+radius, innerRadius, mInnerCirclePaint);
+//        canvas.drawCircle(getPaddingLeft()+radius, getPaddingTop()+radius, radius*3.8f/7, mShadowCirclePaint);
+        canvas.drawCircle(pieLeft+radius, pieTop+radius, innerRadius, mInnerCirclePaint);
 
         drawNameRegion(canvas);
+    }
+
+    private void drawDueTap(Canvas canvas) {
+        float startAngle = -gapDegree;
+        float sweepAngle = 0;
+        for (int i = 0; i < datas.size(); i++) {
+            PieData pd = getItem(i);
+            startAngle += sweepAngle + gapDegree;
+            sweepAngle = (pd.getProportion()*totalDegree)/proportionSum;
+            mSectorPaint.setColor(pd.getColor());
+            if(i == tapRegionIndex) {
+                RectF animationRectF = new RectF(getPaddingLeft(), getPaddingTop(),
+                        getPaddingLeft()+animationRadius*2, getPaddingTop()+animationRadius*2);
+                RectF animShelter = new RectF(pieLeft+radius-animShelterRadius, pieTop+radius-animShelterRadius,
+                        pieLeft+radius+animShelterRadius, pieTop+radius+animShelterRadius);
+                drawSector(canvas, animationRectF, startAngle, sweepAngle);
+                drawText(canvas, getPercentage(i), startAngle+sweepAngle/2, animationRadius, animShelterRadius);
+                canvas.drawArc(animShelter, startAngle-gapDegree, sweepAngle+gapDegree*2, true, mInnerCirclePaint);
+            }else {
+                drawSector(canvas, rectF, startAngle, sweepAngle);
+                drawText(canvas, getPercentage(i), startAngle+sweepAngle/2);
+            }
+            drawNameRegion(canvas);
+        }
+        canvas.drawCircle(pieLeft+radius, pieTop+radius, innerRadius, mInnerCirclePaint);
+    }
+
+    private void drawSector(Canvas canvas, RectF oval, float startAngle, float sweepAngle) {
+//        Log.i("TAG", "startAngle: " + startAngle + "    " + "sweepAngle: " + sweepAngle);
+        canvas.drawArc(oval, startAngle, sweepAngle, true, mSectorPaint);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+//                Log.i("TAG", "calAngleByPoint: " + calAngleByPoint(event.getX(), event.getY()));
+                tapRegionIndex = judgeRegion(event.getX(), calAngleByPoint(event.getX(), event.getY()));
+                if(tapRegionIndex != -1) {
+                    isTap = true;
+                    invalidate();
+                }
+                return true;
+            case MotionEvent.ACTION_UP:
+                if(tapRegionIndex != -1) {
+                    tapRegionIndex = -1;
+                    isTap = true;
+                    invalidate();
+                }
+                return true;
+        }
+        return super.onTouchEvent(event);
+    }
+
+    private float calAngleByPoint(float x, float y) {
+//        Log.i("TAG", "x: " + x + "   y: " + y);
+//        Log.i("TAG", "tanValue: " + (y-getPaddingTop()-radius)/(x-getPaddingLeft()-radius));
+        float angleTemp = (float) Math.toDegrees(Math.atan((y-pieTop-radius)/(x-pieLeft-radius)));
+        if(angleTemp < 0) {
+            angleTemp += 180;
+        }
+        if(y == pieTop+radius) {
+            if(x > pieLeft+radius) {
+                return 0;
+            }else {
+                return 180;
+            }
+        }else if(y > pieTop+radius) {
+            return angleTemp;
+        }else {
+            return angleTemp + 180;
+        }
+    }
+
+    private int judgeRegion(float x, float angle) {
+        for (int i = 0; i < datas.size(); i++) {
+            if(angle >= getStartAngle(i) && angle <= getStartAngle(i+1)-gapDegree) {
+                if(getDistanceByPoint(x, angle) >= innerRadius) {
+//                    Log.i("TAG", "点击了：" + getItem(i).getName());
+                    return i;
+                }else {
+//                    Log.i("TAG", "点击了：无效区域");
+                    return -1;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private float getDistanceByPoint(float x, float angle) {
+        return (float) ((x-pieLeft-radius)/Math.cos(Math.toRadians(angle)));
     }
 
     private void startSectorAnimator() {
@@ -206,9 +324,18 @@ public class ChocPieChart extends View {
     }
 
     private void drawText(Canvas canvas, String text, float angle) {
-        float textX = ((float) (Math.cos(Math.toRadians(angle)) * (radius+innerRadius)/2)) + radius + getPaddingLeft()
+//        float textX = ((float) (Math.cos(Math.toRadians(angle)) * (radius+innerRadius)/2)) + radius + pieLeft
+//                - MeasureUtil.getTextWidth(mTextPaint, text)/2f;
+//        float textY = ((float) (Math.sin(Math.toRadians(angle)) * (radius+innerRadius)/2)) + radius + pieTop;
+////        Log.i("TAG", "textX: " + textX + "   " + "textY: " + textY + "   " + "angle: " + angle);
+//        canvas.drawText(text, textX, textY, mTextPaint);
+        drawText(canvas, text, angle, radius, innerRadius);
+    }
+
+    private void drawText(Canvas canvas, String text, float angle, float r, float innerR) {
+        float textX = ((float) (Math.cos(Math.toRadians(angle)) * (r+innerR)/2)) + radius + pieLeft
                 - MeasureUtil.getTextWidth(mTextPaint, text)/2f;
-        float textY = ((float) (Math.sin(Math.toRadians(angle)) * (radius+innerRadius)/2)) + radius + getPaddingTop();
+        float textY = ((float) (Math.sin(Math.toRadians(angle)) * (r+innerR)/2)) + radius + pieTop;
 //        Log.i("TAG", "textX: " + textX + "   " + "textY: " + textY + "   " + "angle: " + angle);
         canvas.drawText(text, textX, textY, mTextPaint);
     }
