@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
         pieDatas.add(new PieData("三测试", 1, Color.GREEN));
         chocPieChart.setDatas(pieDatas);
 //        chocPieChart.setTextColor(Color.WHITE);
-        chocPieChart.setBackgroundColor(Color.WHITE);
+        chocPieChart.setBackgroundColor(Color.BLACK);
 //        chocPieChart.setBackgroundResource(R.drawable.shadow);
     }
 }

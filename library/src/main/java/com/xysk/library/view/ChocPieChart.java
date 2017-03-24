@@ -174,6 +174,7 @@ public class ChocPieChart extends View {
         pieTop = getPaddingTop()+tapExtensionRadius;
         width = animationRadius*2 + getPaddingLeft() + getPaddingRight();
         height = animationRadius*2 + getPaddingTop() + getPaddingBottom();
+
         setMeasuredDimension(width*2, height);
 //        i++;
     }
@@ -186,7 +187,12 @@ public class ChocPieChart extends View {
             isTap = false;
             return;
         }
-
+        if(sectorIndex >= datas.size()) {
+            //避免数组越界，从桌面重新进入后要再次调用startSectorAnimator
+            sectorIndex = 0;
+            startSectorAnimator();
+            return;
+        }
         if(sectorIndex < datas.size()) {
             int index = sectorIndex;
             for (int i = 0; i < index; i++) { //这里sectorIndex要同步
@@ -209,6 +215,18 @@ public class ChocPieChart extends View {
 
         drawNameRegion(canvas);
     }
+
+//    @Override
+//    protected void onFinishInflate() {
+//        super.onFinishInflate();
+//        Log.i("TAG", "onFinishInflate: 测试");
+//    }
+//
+//    @Override
+//    protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
+//        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+//        Log.i("TAG", "onFocusChanged");
+//    }
 
     private void drawDueTap(Canvas canvas) {
         float startAngle = -gapDegree;
@@ -317,6 +335,8 @@ public class ChocPieChart extends View {
                 }
                 if(sectorIndex < datas.size()) {
                     invalidate();
+                }else {
+//                    sectorIndex = 0;
                 }
             }
         });
