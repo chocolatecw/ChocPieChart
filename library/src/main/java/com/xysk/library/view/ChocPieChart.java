@@ -21,6 +21,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import com.xysk.library.R;
 import com.xysk.library.bean.PieData;
 import com.xysk.library.util.MeasureUtil;
+import com.xysk.library.util.SystemInfoUtil;
 import com.xysk.library.util.UnitConvertUtil;
 
 import java.text.NumberFormat;
@@ -148,40 +149,29 @@ public class ChocPieChart extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        //onMeasure方法会被调用多次
-
-        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
 
-        int width;
-        int height;
-        int tapExtensionRadius;
-
-        if(widthMode == MeasureSpec.EXACTLY) {
-            radius = Math.min(radius, (widthSize+getPaddingLeft()+getPaddingRight())/2);
-//            Log.i("TAG", "widthSize-getPaddingLeft(): " + (widthSize-getPaddingLeft()));
+        if(widthMode == MeasureSpec.AT_MOST && heightMode == MeasureSpec.AT_MOST) {
+            setMeasuredDimension(UnitConvertUtil.Dp2Px(getContext(), 80), UnitConvertUtil.Dp2Px(getContext(), 80));
+        }else if(widthMode == MeasureSpec.AT_MOST) {
+            int sideSize = Math.min(heightSize, SystemInfoUtil.getScreenSize(getContext())[0]);
+            setMeasuredDimension(sideSize, sideSize);
+        }else if(heightMode == MeasureSpec.AT_MOST) {   //这里只考虑竖屏情况，宽一定小于高
+            setMeasuredDimension(widthSize, widthSize);
         }
-        if(heightMode == MeasureSpec.EXACTLY) {
-            radius = Math.min(radius, (heightSize+getPaddingTop()+getPaddingBottom())/2);
-        }
-        innerRadius = radius*3f/7;
-        tapExtensionRadius = (int) (radius*2f/9);
-        animShelterRadius = innerRadius + tapExtensionRadius;
-        animationRadius = radius+tapExtensionRadius;
-        pieLeft = getPaddingLeft()+tapExtensionRadius;
-        pieTop = getPaddingTop()+tapExtensionRadius;
-        width = animationRadius*2 + getPaddingLeft() + getPaddingRight();
-        height = animationRadius*2 + getPaddingTop() + getPaddingBottom();
-
-        setMeasuredDimension(width*2, height);
-//        i++;
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
-        rectF = new RectF(pieLeft, pieTop, pieLeft+radius*2, pieTop+radius*2);
+//        直径 这里只考虑上下左右 padding 都相等的情况
+        int diameter = Math.min(getMeasuredWidth(), getMeasuredHeight()) - getPaddingLeft()*2;
+        radius = (int) (diameter/2f);
+        innerRadius = radius*3.8f/7;
+        rectF = new RectF(getPaddingLeft(), getPaddingTop(), getPaddingLeft()+diameter, getPaddingTop()+diameter);
         if(isTap) {
             drawDueTap(canvas);
             isTap = false;
@@ -211,7 +201,7 @@ public class ChocPieChart extends View {
         }
 
 //        canvas.drawCircle(getPaddingLeft()+radius, getPaddingTop()+radius, radius*3.8f/7, mShadowCirclePaint);
-        canvas.drawCircle(pieLeft+radius, pieTop+radius, innerRadius, mInnerCirclePaint);
+        canvas.drawCircle(getPaddingLeft()+radius, getPaddingTop()+radius, innerRadius, mInnerCirclePaint);
 
         drawNameRegion(canvas);
     }
